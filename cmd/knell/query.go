@@ -60,6 +60,7 @@ Exit codes are the point:
 	ctx := context.Background()
 	now := a.now()
 
+	a.quietLogs(*quiet)
 	skipped := map[string]bool{}
 	for _, s := range ignore {
 		skipped[s] = true

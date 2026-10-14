@@ -145,6 +145,17 @@ func (a *app) close() {
 	}
 }
 
+// quietLogs makes --quiet mean what it says to the process that called it. The
+// logger writes to stderr, and cron turns stderr into mail: a routine
+// `knell check --quiet` that logs a state transition would send a message every
+// time it recorded one, which is noise where the exit code is the signal.
+func (a *app) quietLogs(quiet bool) {
+	if quiet && a.cfg.LogLevel != "error" {
+		a.cfg.LogLevel = "warn"
+		a.log = newLogger(a.cfg, a.stderr)
+	}
+}
+
 func newLogger(cfg config.Config, w io.Writer) *slog.Logger {
 	var lvl slog.Level
 	switch strings.ToLower(cfg.LogLevel) {

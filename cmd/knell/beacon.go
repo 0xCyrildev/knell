@@ -57,6 +57,7 @@ Exit codes
 	defer a.close()
 
 	slug, child := splitArgs(fs.Args())
+	a.quietLogs(*quiet)
 	if slug == "" {
 		fmt.Fprintln(a.stderr, "knell beat: a slug is required (knell beat <slug>)")
 		return exitError

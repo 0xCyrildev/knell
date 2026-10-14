@@ -38,18 +38,28 @@ jobs:
         run: ./bin/knell version && ./bin/knell version --json
 
       # The contract cron depends on: a missing beacon must be a non-zero exit.
+      # Each expected failure is captured with `|| rc=$?`, because `set -e` would
+      # otherwise abort on the very exit code this step is asserting.
       - name: smoke
         run: |
+          set -euo pipefail
           export KNELL_DB=$PWD/smoke.db KNELL_KEYS=$PWD/smoke-keys.json
           ./bin/knell init >/dev/null
           ./bin/knell add ci-smoke --period 10s --grace 1s
           ./bin/knell beat ci-smoke
           ./bin/knell check ci-smoke --quiet
-          test "$(./bin/knell check --quiet; echo $?)" = "0"
+          rc=0; ./bin/knell check --all --quiet || rc=$?
+          [ "$rc" = "0" ] || { echo "healthy check should exit 0, got $rc"; exit 1; }
           sleep 12
-          ./bin/knell check ci-smoke --quiet; rc=$?
-          if [ "$rc" != "1" ]; then echo "silent check should exit 1, got $rc"; exit 1; fi
+          rc=0; ./bin/knell check ci-smoke --quiet || rc=$?
+          [ "$rc" = "1" ] || { echo "silent check should exit 1, got $rc"; exit 1; }
+          rc=0; ./bin/knell check no-such-check --quiet || rc=$?
+          [ "$rc" = "2" ] || { echo "unknown check should exit 2, got $rc"; exit 1; }
+          ./bin/knell status --json | head -5
+          ./bin/knell alerts
           ./bin/knell verify
+          rc=0; ./bin/knell ping || rc=$?
+          [ "$rc" = "1" ] || { echo "ping with no server should exit 1, got $rc"; exit 1; }
           rm -f smoke.db* smoke-keys.json
 
   cross-compile:
