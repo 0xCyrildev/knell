@@ -55,7 +55,13 @@ jobs:
           [ "$rc" = "1" ] || { echo "silent check should exit 1, got $rc"; exit 1; }
           rc=0; ./bin/knell check no-such-check --quiet || rc=$?
           [ "$rc" = "2" ] || { echo "unknown check should exit 2, got $rc"; exit 1; }
-          ./bin/knell status --json | head -5
+          # status reports the same verdict through its exit code, so a script that
+          # only wants the report has to say so. The JSON is compact: tolerate
+          # whitespace rather than pinning the encoder's formatting.
+          ./bin/knell status --json > status.json || true
+          grep -Eq '"slug": *"ci-smoke"' status.json
+          grep -Eq '"state": *"silent"' status.json
+          rm -f status.json
           ./bin/knell alerts
           ./bin/knell verify
           rc=0; ./bin/knell ping || rc=$?

@@ -132,7 +132,7 @@ func (a *app) cmdStatus(args []string) int {
 	fs, jsonOut, _ := a.newFlagSet("status")
 	alerts := fs.Int("alerts", 8, "how many recent state changes to show")
 	fs.Usage = func() {
-		fmt.Fprint(a.stderr, "usage: knell status [--json] [--alerts N]\n\nEverything at once: each check's state, and the alert trail that explains it.\n")
+		fmt.Fprint(a.stderr, "usage: knell status [--json] [--alerts N]\n\nEverything at once: each check's state, and the alert trail that explains it.\nLike `check`, it exits 1 when something is silent — so `knell status || notify` works\nand a script that only wants the report should say `knell status || true`.\n")
 		fs.PrintDefaults()
 	}
 	if err := a.parse(fs, args); err != nil {

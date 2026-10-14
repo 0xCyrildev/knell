@@ -679,6 +679,37 @@ func TestAddPrintsAWorkingRemoteSetupLine(t *testing.T) {
 	}
 }
 
+// status carries the verdict too, so `knell status || notify` works. Documented in
+// docs/DESIGN.md: a script that only wants the report says `|| true`.
+func TestStatusCarriesTheVerdict(t *testing.T) {
+	c := newCLI(t)
+	c.run(t, "add", "nightly", "--period", "1h", "--grace", "5m")
+	c.run(t, "beat", "nightly")
+	if rc := c.run(t, "status"); rc != exitOK {
+		t.Errorf("status while healthy: rc=%d", rc)
+	}
+	c.advance(4 * time.Hour)
+	if rc := c.run(t, "status"); rc != 1 {
+		t.Errorf("status while silent: rc=%d, want 1", rc)
+	}
+	if rc := c.run(t, "status", "--json"); rc != 1 {
+		t.Errorf("status --json while silent: rc=%d, want 1", rc)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(c.out.Bytes(), &doc); err != nil {
+		t.Fatalf("status --json must still print the report: %v", err)
+	}
+	if rc := c.run(t, "list"); rc != exitOK {
+		t.Errorf("list is a report, not a verdict: rc=%d", rc)
+	}
+	if rc := c.run(t, "alerts"); rc != exitOK {
+		t.Errorf("alerts should exit 0 after printing: rc=%d", rc)
+	}
+	if !strings.Contains(c.out.String(), "silent") {
+		t.Errorf("the CLI should have recorded the transition without a daemon: %s", c.out.String())
+	}
+}
+
 func TestCheckWithNoChecksConfigured(t *testing.T) {
 	c := newCLI(t)
 	// Nothing configured is not "all well": a wiped checks table must not look

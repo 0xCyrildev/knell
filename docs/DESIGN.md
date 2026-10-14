@@ -82,6 +82,12 @@ whole rule, and the reason a monitoring failure gets `2` rather than `1` is that
 reader must be able to tell "your backup broke" from "your backup is fine and nothing is
 watching it".
 
+`knell status` reports the same verdict through its own exit code, so
+`knell status || notify` works; a script that only wants the report should say
+`knell status || true`. `knell alerts`, `list` and `history` exit 0 whenever they
+printed, and `knell verify` uses 1 for "a beacon cannot be explained" — a non-zero code
+always means something a human should look at, never "the command ran".
+
 ## Beacons
 
 The signed message is:
