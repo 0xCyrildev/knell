@@ -4,6 +4,16 @@ All notable changes to knell are documented here. The format follows
 Keep a Changelog; knell aims at Semantic Versioning, and the promise that
 versioning protects is the exit-code contract in `docs/DESIGN.md`.
 
+## [0.1.1] - 2026-10-14
+
+`--quiet` now also silences the logger. The logger writes to stderr and cron turns
+stderr into mail, so a routine `knell check --quiet` was announcing every state
+transition it recorded — noise where the exit code is the signal.
+
+Documented that `knell status` carries the verdict in its own exit code
+(`knell status || notify` works; use `|| true` for a pure report), with a test that
+pins it. CI's smoke step fixed accordingly.
+
 ## [0.1.0] - 2026-10-14
 
 First public release.
