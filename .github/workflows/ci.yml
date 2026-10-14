@@ -1,0 +1,73 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # A formatted diff is a review cost, so formatting is a build failure.
+      - name: gofmt
+        run: |
+          out=$(gofmt -l ./cmd ./internal)
+          if [ -n "$out" ]; then echo "needs gofmt:"; echo "$out"; exit 1; fi
+
+      - name: vet
+        run: go vet ./...
+
+      - name: test
+        run: go test -race -count=1 ./...
+
+      - name: build
+        run: make build
+
+      - name: version is stamped
+        run: ./bin/knell version && ./bin/knell version --json
+
+      # The contract cron depends on: a missing beacon must be a non-zero exit.
+      - name: smoke
+        run: |
+          export KNELL_DB=$PWD/smoke.db KNELL_KEYS=$PWD/smoke-keys.json
+          ./bin/knell init >/dev/null
+          ./bin/knell add ci-smoke --period 10s --grace 1s
+          ./bin/knell beat ci-smoke
+          ./bin/knell check ci-smoke --quiet
+          test "$(./bin/knell check --quiet; echo $?)" = "0"
+          sleep 12
+          ./bin/knell check ci-smoke --quiet; rc=$?
+          if [ "$rc" != "1" ]; then echo "silent check should exit 1, got $rc"; exit 1; fi
+          ./bin/knell verify
+          rm -f smoke.db* smoke-keys.json
+
+  cross-compile:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: build ${{ matrix.goos }}/${{ matrix.goarch }}
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: go build -trimpath -o /tmp/knell ./cmd/knell

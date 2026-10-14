@@ -1,0 +1,19 @@
+bin/
+dist/
+coverage.out
+*.db
+*.db-wal
+*.db-shm
+*.key
+*.pem
+.env
+
+# Project memory stays local: it is the working notebook, not documentation.
+# See docs/DESIGN.md for what is published instead.
+AGENTS.md
+AGENTS.*.md
+.claude/
+.qoder/
+.idea/
+.vscode/
+*.tmp
